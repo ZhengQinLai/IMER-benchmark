@@ -1,1 +1,1 @@
-# IncrementalLearning4MER
+# IMER benchmark
