@@ -88,7 +88,7 @@ The script will process each configured dataset and save the optical flow images
 The models (especially ViT, Swin, ResNet backbones) rely on pretrained weights for initialization. You need to download these weights and make them accessible to the project.
 
 1.  **Identify Required Weights:** The `.env` file specifies the expected paths for the weights:
-    *   Swin Transformer: `/mnt/model/I-MER/swinv2_tiny_patch4_window8_256.pth`[[https://github.com/SwinTransformer/storage/releases/download/v2.0.0/swinv2_tiny_patch4_window8_256.pth]]
+    *   Swin Transformer: (`/mnt/model/I-MER/swinv2_tiny_patch4_window8_256.pth`)[https://github.com/SwinTransformer/storage/releases/download/v2.0.0/swinv2_tiny_patch4_window8_256.pth]
     *   Vision Transformer (ViT): `/mnt/model/I-MER/vit_base_patch16_224.bin`
     *   ResNet: `/mnt/model/I-MER/resnet152.bin`
 
@@ -127,5 +127,7 @@ Results, including accuracy curves, will be logged and potentially saved to CSV 
 We thank the following repos providing helpful components/functions in our work.
 
 [LAMDA-PILOT](https://github.com/sun-hailong/LAMDA-PILOT)
+
 [l2p-pytorch](https://github.com/JH-LEE-KR/l2p-pytorch)
+
 [RanPAC](https://github.com/RanPAC/RanPAC/)
