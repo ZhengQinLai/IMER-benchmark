@@ -1,0 +1,15 @@
+model_name: ranpac
+backbone_type: resnet_152
+device: "0"
+seed: 1993
+tuned_epoch: 60
+init_lr: 0.00002
+batch_size: 16
+weight_decay: 0.005
+use_RP: true
+M: 10000
+K: 5
+split_mode: 'k_fold'
+nb_classes: 23
+img_size: 224
+dataset: 'iMER'

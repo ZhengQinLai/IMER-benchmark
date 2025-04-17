@@ -1,0 +1,27 @@
+model_name: foster
+backbone_type: myswin_train
+device: "0"
+seed: 1993
+init_epoch: 60
+tuned_epoch: 10
+init_lr: 0.00002
+lrate: 0.00002
+batch_size: 16
+weight_decay: 0.005
+init_weight_decay: 0.005
+K: 5
+split_mode: 'k_fold'
+nb_classes: 23
+img_size: 256
+
+beta1: 0.96
+beta2: 0.97
+oofc: ft
+is_teacher_wa: false
+is_student_wa: false
+lambda_okd: 1
+wa_value: 1
+T: 2
+boosting_epochs: 10
+compression_epochs: 10
+dataset: 'iMER'

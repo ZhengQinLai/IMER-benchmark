@@ -1,0 +1,16 @@
+model_name: finetune
+backbone_type: resnet_152
+device: "0"
+seed: 1993
+init_epoch: 60
+tuned_epoch: 10
+init_lr: 0.00002
+lrate: 0.00002
+batch_size: 16
+weight_decay: 0.005
+init_weight_decay: 0.005
+K: 5
+split_mode: 'k_fold'
+nb_classes: 23
+img_size: 224
+dataset: 'iMER'
