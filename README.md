@@ -26,12 +26,12 @@ This project provides a framework for benchmarking various incremental learning 
 
 The project implements the following incremental learning strategies:
 
-*   Finetune (Baseline)
-*   DER (Dynamic Expanding Representation)
-*   Foster (Feature Boosting and Compression)
-*   L2P (Learning to Prompt)
+*   Finetune
+*   DER
+*   Foster
+*   L2P
 *   DualPrompt
-*   RanPAC (Random Projection Incremental Classifier)
+*   RanPAC
 
 ## Supported Backbones
 
