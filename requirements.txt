@@ -1,0 +1,15 @@
+matplotlib==3.10.1
+numpy==2.2.4
+opencv-python # Added for cv2 import
+pandas==2.2.3
+Pillow==11.2.1
+python-dotenv==1.1.0
+PyYAML==6.0.2
+scikit-learn==1.6.1 # Corrected package name for scikit_learn
+scipy==1.15.2
+seaborn==0.13.2
+timm==1.0.15
+torch==2.5.1
+torchvision==0.20.1
+tqdm==4.66.5
+umap-learn==0.5.6 # Corrected package name for umap
