@@ -131,3 +131,16 @@ We thank the following repos providing helpful components/functions in our work.
 [l2p-pytorch](https://github.com/JH-LEE-KR/l2p-pytorch)
 
 [RanPAC](https://github.com/RanPAC/RanPAC/)
+
+## Citation
+
+If you find this benchmark useful in your research, please consider citing our paper:
+
+```bibtex
+@article{lai2025benchmark,
+  title={A Benchmark for Incremental Micro-expression Recognition},
+  author={Lai, Zhengqin and Hong, Xiaopeng and Wang, Yabin and Li, Xiaobai},
+  journal={arXiv preprint arXiv:2501.19111},
+  year={2025}
+}
+```
