@@ -89,8 +89,8 @@ The models (especially ViT, Swin, ResNet backbones) rely on pretrained weights f
 
 1.  **Identify Required Weights:** The `.env` file specifies the expected paths for the weights:
     *   Swin Transformer: [`/mnt/model/I-MER/swinv2_tiny_patch4_window8_256.pth`](https://github.com/SwinTransformer/storage/releases/download/v2.0.0/swinv2_tiny_patch4_window8_256.pth)
-    *   Vision Transformer (ViT): `/mnt/model/I-MER/vit_base_patch16_224.bin`
-    *   ResNet: `/mnt/model/I-MER/resnet152.bin`
+    *   Vision Transformer (ViT): [`/mnt/model/I-MER/vit_base_patch16_224.bin`](https://huggingface.co/timm/vit_base_patch16_224.augreg_in21k_ft_in1k/blob/main/pytorch_model.bin)
+    *   ResNet: [`/mnt/model/I-MER/resnet152.bin`](https://huggingface.co/timm/resnet152.a1_in1k/blob/main/pytorch_model.bin)
 
 2.  **Configure Paths in `.env`:**
     *   Place the downloaded weight files in a location accessible by the project.
