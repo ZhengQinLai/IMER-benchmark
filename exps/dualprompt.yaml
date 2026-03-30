@@ -64,5 +64,5 @@ same_key_value: false
 K: 5
 split_mode: 'k_fold'
 img_size: 224
-nb_classes: 23
+nb_classes: 30
 dataset: 'iMER'

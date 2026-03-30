@@ -36,16 +36,26 @@ def _train(args):
     print_args(args)
 
     index_gen = IncrementalIndexGenerator(split_flag=args["split_mode"], up=args.get('up', False))
-    dataloader_gen = IncrementalDataloaderGenerator(batch_size=args['batch_size'], shuffle='True', img_size=args['img_size'])
+    dataloader_gen = IncrementalDataloaderGenerator(
+        batch_size=args['batch_size'],
+        shuffle='True',
+        img_size=args['img_size'],
+        # DFME-only option: load a stack of flows (onset->apex and onset->(apex±1/2/3)).
+        # NOTE: Enable this only if your model supports 5D inputs [B, T, C, H, W].
+        use_dfme_multiflow=args.get("use_dfme_multiflow", False),
+    )
     cnn_fold = []
     classifier_fold = []
-    all_y_pred, all_y_true = [[],[],[],[]], [[],[],[],[]]
+    # Number of sessions is determined by the data actually loaded.
+    num_sessions = len(index_gen.split_indices)
+    all_y_pred = [[] for _ in range(num_sessions)]
+    all_y_true = [[] for _ in range(num_sessions)]
     for fold in range(args['K']):
         model = factory.get_model(args["model_name"], args)
         model.Incregen = dataloader_gen
         cnn_list = []
         classifier_list = []
-        for session in range(len(np.unique(list(index_gen.iData.d2i.values())))):
+        for session in range(num_sessions):
             train_idx, test_idx = index_gen.get_split(session, fold)
             model.cur_split = train_idx, test_idx
             train_loader, test_loader = dataloader_gen.get_dataloader(train_idx, test_idx, extra_data=model._get_memory())
@@ -67,7 +77,7 @@ def _train(args):
             pass
         else:
             classifier_fold.append(classifier_list)
-    for session in range(len(np.unique(list(index_gen.iData.d2i.values())))):
+    for session in range(num_sessions):
         all_y_pred[session] = np.concatenate(all_y_pred[session])
         all_y_true[session] = np.concatenate(all_y_true[session])
 

@@ -10,6 +10,6 @@ use_RP: true
 M: 10000
 K: 5
 split_mode: 'k_fold'
-nb_classes: 23
+nb_classes: 30
 img_size: 256
 dataset: 'iMER'

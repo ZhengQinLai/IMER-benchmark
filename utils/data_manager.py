@@ -1,22 +1,23 @@
 import logging
+import os
 import numpy as np
 from PIL import Image
-from torch.utils.data import Dataset
 from torchvision import transforms
-import numpy as np
+import torch
 from torch.utils.data import DataLoader, Dataset
 from sklearn.model_selection import KFold
-import numpy as np
 
 
 from utils.data import iMER, iMER4UP
 class IncrementalDataloaderGenerator:
-    def __init__(self, batch_size=16, shuffle=True, img_size = 224):
+    def __init__(self, batch_size=16, shuffle=True, img_size=224, use_dfme_multiflow=False):
         self.iData = iMER()
         self.iData.download_data()
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.img_size = img_size
+        # Whether to use DFME multi-flow loading (onset↔apex±n frames)
+        self.use_dfme_multiflow = use_dfme_multiflow
 
     def get_dataset(self, indices, extra_data=None):
         data, targets = self._filter_data(indices)
@@ -40,8 +41,25 @@ class IncrementalDataloaderGenerator:
         train_dataset = self._create_dataset(train_data, train_targets)
         test_dataset = self._create_dataset(test_data, test_targets)
 
-        train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=32)
-        test_loader = DataLoader(test_dataset, batch_size=self.batch_size, shuffle=False, num_workers=32)
+        if self.use_dfme_multiflow:
+            collate_fn = _collate_multi_flow
+        else:
+            collate_fn = None
+
+        train_loader = DataLoader(
+            train_dataset,
+            batch_size=self.batch_size,
+            shuffle=self.shuffle,
+            num_workers=32,
+            collate_fn=collate_fn,
+        )
+        test_loader = DataLoader(
+            test_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=32,
+            collate_fn=collate_fn,
+        )
 
         return train_loader, test_loader
 
@@ -66,7 +84,13 @@ class IncrementalDataloaderGenerator:
         """
         Creates a Dataset object from the given data and targets.
         """
-        return CustomDataset(self.iData, data, targets, self.img_size)
+        return CustomDataset(
+            self.iData,
+            data,
+            targets,
+            self.img_size,
+            use_dfme_multiflow=self.use_dfme_multiflow,
+        )
 
 
 class IncrementalIndexGenerator:
@@ -91,13 +115,22 @@ class IncrementalIndexGenerator:
             session_indices = np.where(self.iData.session == current_session)[0]
             session_splits = []
 
-            if self.split_flag == "ILCV":
+            # Backward-compatible aliases:
+            #   - "ILCV"   -> k-fold split
+            #   - "SLCV"   -> subject-based split
+            split_flag = self.split_flag
+            if split_flag == "ILCV":
+                split_flag = "k_fold"
+            elif split_flag == "SLCV":
+                split_flag = "subject"
+
+            if split_flag == "k_fold":
                 kf = KFold(n_splits=self.k, shuffle=True, random_state=42)
                 for fold_train, fold_test in kf.split(session_indices):
                     session_splits.append((session_indices[fold_train], session_indices[fold_test]))
 
-            elif self.split_flag == "SLCV":
-                session_subjects = self.iData.SLCV[session_indices]
+            elif split_flag == "subject":
+                session_subjects = getattr(self.iData, "subject", self.iData.SLCV)[session_indices]
                 unique_subjects = np.unique(session_subjects)
                 folds = [unique_subjects[i::self.subjects_per_fold] for i in range(self.subjects_per_fold)]
 
@@ -136,10 +169,48 @@ class IncrementalIndexGenerator:
         return train_fold_indices, np.unique(test_indices)
 
 
+def _collate_multi_flow(batch):
+    """
+    Custom collate function that supports variable-length multi-flow inputs.
+
+    Each sample's `image` can be:
+      - [C, H, W]        (single flow)
+      - [T, C, H, W]     (multi-flow)
+
+    We:
+      1) ensure all become [T, C, H, W] (T>=1),
+      2) pad along T to the maximum T in this batch,
+      3) stack into [B, Tmax, C, H, W].
+    """
+    images, targets = zip(*batch)
+
+    processed = []
+    max_T = 1
+    for img in images:
+        if img.dim() == 3:
+            img = img.unsqueeze(0)  # [1, C, H, W]
+        t = img.size(0)
+        max_T = max(max_T, t)
+        processed.append(img)
+
+    padded = []
+    for img in processed:
+        t, c, h, w = img.shape
+        if t < max_T:
+            pad = torch.zeros(max_T - t, c, h, w, dtype=img.dtype)
+            img = torch.cat([img, pad], dim=0)
+        padded.append(img)
+
+    batch_images = torch.stack(padded, dim=0)  # [B, Tmax, C, H, W]
+    batch_targets = torch.as_tensor(targets, dtype=torch.long)
+    return batch_images, batch_targets
+
+
 class CustomDataset(Dataset):
-    def __init__(self, iData, data, targets, img_size):
+    def __init__(self, iData, data, targets, img_size, use_dfme_multiflow=False):
         self.data = data
         self.targets = targets
+        self.use_dfme_multiflow = use_dfme_multiflow
 
         transform = [
         transforms.Resize([img_size, img_size]),
@@ -158,7 +229,47 @@ class CustomDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        image = self.transform(pil_loader(self.data[idx]))
+        path = self.data[idx]
+        # Determine dataset name from folder (e.g., "dfme_anger" -> "dfme")
+        class_dir = os.path.basename(os.path.dirname(path))
+        dataset_name = class_dir.split('_')[0] if '_' in class_dir else class_dir
+
+        # For DFME (when enabled), load the central flow and its auxiliary flows
+        # around the apex (pre/post n frames), as a stack of images.
+        if self.use_dfme_multiflow and dataset_name == "dfme":
+            import re
+
+            base_root, ext = os.path.splitext(path)
+
+            # Parse apex frame index from filename: *_onsetXX_apexYY.png
+            fname = os.path.basename(base_root)
+            m = re.search(r"_apex(\d+)$", fname)
+            apex_frame = int(m.group(1)) if m else None
+
+            img_paths = [path]  # central onset→apex flow
+
+            if apex_frame is not None:
+                # Neighbour offsets around apex: [-3, -2, -1, +1, +2, +3]
+                neighbor_offsets = [-3, -2, -1, 1, 2, 3]
+                for off in neighbor_offsets:
+                    t = apex_frame + off
+                    if t < 0:
+                        # Use central flow as fallback for invalid indices
+                        img_paths.append(path)
+                        continue
+                    aux_path = f"{base_root}_f{int(t)}{ext}"
+                    if os.path.exists(aux_path):
+                        img_paths.append(aux_path)
+                    else:
+                        # If auxiliary flow is missing, fall back to central flow
+                        img_paths.append(path)
+
+            imgs = [self.transform(pil_loader(p)) for p in img_paths]
+            # Shape: [num_flows, C, H, W]
+            image = torch.stack(imgs, dim=0)
+        else:
+            image = self.transform(pil_loader(path))
+
         return image, self.targets[idx]
 
 def pil_loader(path):
@@ -176,8 +287,9 @@ if __name__ == "__main__":
     mix_me = iMER()
     mix_me.download_data()
 
-    index_gen = IncrementalIndexGenerator(mix_me, split_flag="SLCV")
-    dataloader_gen = IncrementalDataloaderGenerator(mix_me)
+    # NOTE: split_flag supports: "k_fold"/"ILCV", "subject"/"SLCV", or "session".
+    index_gen = IncrementalIndexGenerator(split_flag="subject")
+    dataloader_gen = IncrementalDataloaderGenerator()
 
     print("Precomputed splits:")
     for session_idx in range(len(index_gen.split_indices)):

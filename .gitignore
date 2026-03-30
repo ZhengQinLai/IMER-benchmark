@@ -1,0 +1,49 @@
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+*.dylib
+*.dll
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Packaging / build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Test / lint / typecheck caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Coverage
+.coverage
+htmlcov/
+
+# IDE / OS files
+.vscode/
+.idea/
+.DS_Store
+
+# Training logs / outputs
+log/
+logs/
+
+# Dataset outputs (do NOT commit)
+dataset/mix_me_all/
+dataset/**/mix_me_all/
+
+# Model weights / large binaries (local only)
+*.pth
+*.pt
+*.bin
+

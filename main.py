@@ -23,7 +23,7 @@ def fix_seed(seed):
 
 def main(args):
     fix_seed(args['seed'])
-    curve = train(args)  # curve should be a 4x4 list
+    curve = train(args)  # curve is a list over sessions (length depends on enabled datasets)
     return curve, args['config'], args['split_mode']
 
 def load_json(setting_path):
@@ -55,6 +55,8 @@ def save_to_csv(curve, name, filename='result'):
     filename+='.csv'
     # Ensure curve is a numpy array
     curve = np.array(curve)
+    if curve.ndim != 2:
+        raise ValueError(f"Expected `curve` to be 2D (folds x sessions), got shape: {curve.shape}")
     
     # Compute row means and append as the fifth column
     row_means = curve.mean(axis=1)
@@ -64,8 +66,8 @@ def save_to_csv(curve, name, filename='result'):
     col_means = curve_with_row_means.mean(axis=0)
     result = np.vstack((curve_with_row_means, col_means))
     
-    # Repeat name 5 times to create the first column
-    names_column = [name] * 5 + ["Mean"]
+    # Repeat `name` for each fold row; add an extra row for the overall mean.
+    names_column = [name] * curve.shape[0] + ["Mean"]
     
     # Combine names and result
     final_result = np.column_stack((names_column, result))
@@ -73,7 +75,8 @@ def save_to_csv(curve, name, filename='result'):
     # Save to CSV
     with open(filename, mode='a+', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow(["Name", "session 1", "session 2", "session 3", "session 4", "Mean"])
+        header = ["Name"] + [f"session {i+1}" for i in range(curve.shape[1])] + ["Mean"]
+        writer.writerow(header)
         writer.writerows(final_result)
 
 if __name__ == '__main__':
